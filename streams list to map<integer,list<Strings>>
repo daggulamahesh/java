@@ -1,0 +1,2 @@
+multimap = data.stream().collect(Collectors.groupingBy(DuplicateRecords::getDuplicateSetId,
+					Collectors.mapping(DuplicateRecords::getData, Collectors.toList())));
