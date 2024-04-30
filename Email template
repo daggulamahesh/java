@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Table</title>
+    <!-- Include Font Awesome stylesheet -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+    <style>
+        /* Define styles for the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tbody tr:hover {
+            background-color: #ddd;
+        }
+        /* Define styles for Font Awesome icons */
+        .fa {
+            margin-right: 5px; /* Add some space between icons and text */
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <table border="1">
+            <thead>
+                <tr>
+                    <!-- Dynamic headers with different colspans -->
+                    <th th:each="header : ${firstRowHeaders}" th:colspan="${header.colspan}" th:text="${header.label}"></th>
+                </tr>
+                <tr>
+                    <!-- Second row headers -->
+                    <th th:each="header : ${secondRowHeaders}" th:text="${header}"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <!-- Display normal text for the first two cells -->
+                    <td th:text="${row[0]}"></td>
+                    <td th:text="${row[1]}"></td>
+                    <!-- Compare each value with the map of values and their corresponding Font Awesome icons -->
+                    <td>
+                        <i th:each="value : ${row.subList(2, row.size())}" th:class="${iconMap[value]}"></i>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
