@@ -1,1 +1,12 @@
 ^(0[1-9]|[12][0-9]|3[01])-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{2}$
+
+
+SELECT
+    date_column,
+    CASE
+        WHEN date_column ~ '^(0[1-9]|[12][0-9]|3[01])-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-\d{2}$' THEN 'Valid'
+        ELSE 'Invalid'
+    END AS date_validation
+FROM
+    your_table;
+
