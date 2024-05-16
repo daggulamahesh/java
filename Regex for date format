@@ -10,3 +10,42 @@ SELECT
 FROM
     your_table;
 
+Explanation:
+Anchors (^ and $):
+
+^ asserts the position at the start of the string.
+$ asserts the position at the end of the string.
+These ensure that the entire string must match the pattern, not just a part of it.
+Day Part (0[1-9]|[12][0-9]|3[01]):
+
+0[1-9] matches days from 01 to 09:
+0 is a literal zero.
+[1-9] matches any digit from 1 to 9.
+[12][0-9] matches days from 10 to 29:
+[12] matches either 1 or 2.
+[0-9] matches any digit from 0 to 9.
+3[01] matches days 30 and 31:
+3 is a literal three.
+[01] matches either 0 or 1.
+The entire group is enclosed in parentheses and separated by | (OR operator), allowing for any valid day from 01 to 31.
+Hyphen (-):
+
+- is a literal hyphen used to separate the day, month, and year parts in the date format.
+Month Part (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec):
+
+Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec matches any of the abbreviated month names.
+Each month abbreviation is separated by | (OR operator), ensuring any valid three-letter month abbreviation is matched.
+Hyphen (-):
+
+Another literal hyphen used to separate the month and year parts.
+Year Part \d{2}:
+
+\d matches any digit (equivalent to [0-9]).
+{2} specifies exactly two occurrences of the preceding element (a digit).
+This ensures the year part consists of exactly two digits.
+Summary:
+The regex ensures that the date string starts and ends with the specified pattern.
+The day part is matched against valid days (01 to 31).
+The month part is matched against valid abbreviated month names (Jan, Feb, etc.).
+The year part is matched against any two-digit year (00 to 99).
+This regex pattern ensures that only properly formatted DD-mmm-yy dates are considered valid.
