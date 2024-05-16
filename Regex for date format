@@ -49,3 +49,7 @@ The day part is matched against valid days (01 to 31).
 The month part is matched against valid abbreviated month names (Jan, Feb, etc.).
 The year part is matched against any two-digit year (00 to 99).
 This regex pattern ensures that only properly formatted DD-mmm-yy dates are considered valid.
+
+
+
+^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{3}$
