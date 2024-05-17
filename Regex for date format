@@ -56,3 +56,16 @@ This regex pattern ensures that only properly formatted DD-mmm-yy dates are cons
 
 
 ^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$
+
+
+SELECT
+    date_col1,
+    date_col2,
+    CASE
+        WHEN date_col1 ~ '^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'
+             AND date_col2 ~ '^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$'
+        THEN 'Valid (YYYY-MM-DD)'
+        ELSE 'Invalid'
+    END AS date_validation
+FROM
+    dates_table;
