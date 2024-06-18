@@ -1,0 +1,19 @@
+WITH duplicate_records AS (
+    SELECT 
+        employee_id,
+        first_name,
+        last_name,
+        department,
+        COUNT(*) OVER (PARTITION BY employee_id) AS cnt
+    FROM 
+        employees
+)
+SELECT 
+    employee_id,
+    first_name,
+    last_name,
+    department
+FROM 
+    duplicate_records
+WHERE 
+    cnt > 1;
