@@ -17,3 +17,9 @@ FROM
     duplicate_records
 WHERE 
     cnt > 1;
+Key Points about PARTITION BY:
+Divides the result set: It divides the result set into partitions based on the values of one or more specified columns.
+Window functions: Common window functions used with PARTITION BY include ROW_NUMBER(), RANK(), DENSE_RANK(), NTILE(), SUM(), AVG(), COUNT(), etc.
+Independent calculations: Each partition has calculations (such as ranking or counting) applied independently of the other partitions.
+Example Usage
+Let's demonstrate with an example using a table sales with columns sale_id, product_id, sale_amount, and sale_date.
