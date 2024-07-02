@@ -1,0 +1,64 @@
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.List;
+
+public class ExcelSheetCopier {
+
+    public static byte[] copySheets(String sourceFilePath, List<String> sheetNames) throws IOException {
+        try (FileInputStream fileInputStream = new FileInputStream(sourceFilePath);
+             Workbook sourceWorkbook = WorkbookFactory.create(fileInputStream);
+             Workbook targetWorkbook = new XSSFWorkbook()) {
+
+            for (String sheetName : sheetNames) {
+                int sheetIndex = sourceWorkbook.getSheetIndex(sheetName);
+                if (sheetIndex != -1) {
+                    sourceWorkbook.cloneSheet(sheetIndex);
+                    targetWorkbook.setSheetName(targetWorkbook.getNumberOfSheets() - 1, sheetName);
+                }
+            }
+
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            targetWorkbook.write(byteArrayOutputStream);
+            return byteArrayOutputStream.toByteArray();
+        }
+    }
+}
+
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.io.IOException;
+import java.util.List;
+
+@RestController
+public class ExcelController {
+
+    @GetMapping("/download-excel")
+    public ResponseEntity<Resource> downloadExcel(
+            @RequestParam String sourceFilePath,
+            @RequestParam List<String> sheetNames) throws IOException {
+
+        byte[] excelBytes = ExcelSheetCopier.copySheets(sourceFilePath, sheetNames);
+        ByteArrayResource resource = new ByteArrayResource(excelBytes);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=selected_sheets.xlsx");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentLength(excelBytes.length)
+                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
+    }
+}
