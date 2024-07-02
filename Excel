@@ -129,3 +129,94 @@ public class ExcelSheetCopier {
         }
     }
 }
+
+
+
+
+----_----
+
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ExcelSheetCopier {
+
+    public static byte[] copySheets(Path sourceFilePath, List<String> sheetNames) throws IOException {
+        try (FileInputStream fileInputStream = new FileInputStream(sourceFilePath.toFile());
+             Workbook sourceWorkbook = WorkbookFactory.create(fileInputStream);
+             Workbook targetWorkbook = new XSSFWorkbook()) {
+
+            Map<CellStyle, CellStyle> styleMap = new HashMap<>();
+
+            for (String sheetName : sheetNames) {
+                int sheetIndex = sourceWorkbook.getSheetIndex(sheetName);
+                if (sheetIndex != -1) {
+                    Sheet sourceSheet = sourceWorkbook.getSheetAt(sheetIndex);
+                    Sheet targetSheet = targetWorkbook.createSheet(sheetName);
+
+                    // Copy rows and cells from sourceSheet to targetSheet
+                    for (int i = 0; i <= sourceSheet.getLastRowNum(); i++) {
+                        Row sourceRow = sourceSheet.getRow(i);
+                        if (sourceRow != null) {
+                            Row targetRow = targetSheet.createRow(i);
+                            for (int j = 0; j < sourceRow.getLastCellNum(); j++) {
+                                Cell sourceCell = sourceRow.getCell(j);
+                                if (sourceCell != null) {
+                                    Cell targetCell = targetRow.createCell(j);
+                                    copyCell(sourceCell, targetCell, targetWorkbook, styleMap);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            targetWorkbook.write(byteArrayOutputStream);
+            return byteArrayOutputStream.toByteArray();
+        }
+    }
+
+    private static void copyCell(Cell sourceCell, Cell targetCell, Workbook targetWorkbook, Map<CellStyle, CellStyle> styleMap) {
+        // Copy the cell value
+        switch (sourceCell.getCellType()) {
+            case STRING:
+                targetCell.setCellValue(sourceCell.getStringCellValue());
+                break;
+            case NUMERIC:
+                targetCell.setCellValue(sourceCell.getNumericCellValue());
+                break;
+            case BOOLEAN:
+                targetCell.setCellValue(sourceCell.getBooleanCellValue());
+                break;
+            case FORMULA:
+                targetCell.setCellFormula(sourceCell.getCellFormula());
+                break;
+            case BLANK:
+                targetCell.setBlank();
+                break;
+            default:
+                break;
+        }
+
+        // Copy the cell style
+        if (sourceCell.getCellStyle() != null) {
+            CellStyle sourceCellStyle = sourceCell.getCellStyle();
+            CellStyle targetCellStyle = styleMap.get(sourceCellStyle);
+            if (targetCellStyle == null) {
+                targetCellStyle = targetWorkbook.createCellStyle();
+                targetCellStyle.cloneStyleFrom(sourceCellStyle);
+                styleMap.put(sourceCellStyle, targetCellStyle);
+            }
+            targetCell.setCellStyle(targetCellStyle);
+        }
+    }
+}
