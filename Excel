@@ -62,3 +62,70 @@ public class ExcelController {
                 .body(resource);
     }
 }
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Cell;
+
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+
+public class ExcelSheetCopier {
+
+    public static byte[] copySheets(Path sourceFilePath, List<String> sheetNames) throws IOException {
+        try (FileInputStream fileInputStream = new FileInputStream(sourceFilePath.toFile());
+             Workbook sourceWorkbook = WorkbookFactory.create(fileInputStream);
+             Workbook targetWorkbook = new XSSFWorkbook()) {
+
+            for (String sheetName : sheetNames) {
+                int sheetIndex = sourceWorkbook.getSheetIndex(sheetName);
+                if (sheetIndex != -1) {
+                    Sheet sourceSheet = sourceWorkbook.getSheetAt(sheetIndex);
+                    Sheet targetSheet = targetWorkbook.createSheet(sheetName);
+
+                    // Copy rows and cells from sourceSheet to targetSheet
+                    for (int i = 0; i <= sourceSheet.getLastRowNum(); i++) {
+                        Row sourceRow = sourceSheet.getRow(i);
+                        if (sourceRow != null) {
+                            Row targetRow = targetSheet.createRow(i);
+                            for (int j = 0; j < sourceRow.getLastCellNum(); j++) {
+                                Cell sourceCell = sourceRow.getCell(j);
+                                if (sourceCell != null) {
+                                    Cell targetCell = targetRow.createCell(j);
+                                    switch (sourceCell.getCellType()) {
+                                        case STRING:
+                                            targetCell.setCellValue(sourceCell.getStringCellValue());
+                                            break;
+                                        case NUMERIC:
+                                            targetCell.setCellValue(sourceCell.getNumericCellValue());
+                                            break;
+                                        case BOOLEAN:
+                                            targetCell.setCellValue(sourceCell.getBooleanCellValue());
+                                            break;
+                                        case FORMULA:
+                                            targetCell.setCellFormula(sourceCell.getCellFormula());
+                                            break;
+                                        case BLANK:
+                                            targetCell.setBlank();
+                                            break;
+                                        default:
+                                            break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            targetWorkbook.write(byteArrayOutputStream);
+            return byteArrayOutputStream.toByteArray();
+        }
+    }
+}
