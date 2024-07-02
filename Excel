@@ -220,3 +220,27 @@ public class ExcelSheetCopier {
         }
     }
 }
+
+
+
+
+
+if (sourceSheet instanceof XSSFSheet) {
+                        XSSFDrawing sourceDrawing = ((XSSFSheet) sourceSheet).getDrawingPatriarch();
+                        if (sourceDrawing != null) {
+                            XSSFDrawing targetDrawing = targetSheet.createDrawingPatriarch();
+                            for (XSSFShape shape : sourceDrawing.getShapes()) {
+                                if (shape instanceof XSSFPicture) {
+                                    XSSFPicture sourcePicture = (XSSFPicture) shape;
+                                    XSSFPictureData sourcePictureData = sourcePicture.getPictureData();
+
+                                    int pictureIndex = targetWorkbook.addPicture(sourcePictureData.getData(), sourcePictureData.getPictureType());
+                                    XSSFPicture targetPicture = targetDrawing.createPicture(sourcePicture.getPreferredSize(), pictureIndex);
+
+                                    targetPicture.setClientAnchor(sourcePicture.getClientAnchor());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
