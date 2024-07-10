@@ -92,3 +92,15 @@ public class FileUploadController {
         }
     }
 }
+
+
+
+
+
+---------------
+
+aws.access.key.id=your-access-key-id
+aws.secret.access.key=your-secret-access-key
+aws.region=your-region
+aws.s3.bucket=your-bucket-name
+
