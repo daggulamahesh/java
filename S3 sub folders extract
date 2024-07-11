@@ -104,3 +104,26 @@ public class S3Service {
         }
     }
 }
+
+
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class FileUploadController {
+
+    @Autowired
+    private S3Service s3Service;
+
+    @GetMapping("/list-all-folders")
+    public ResponseEntity<S3Folder> listAllFoldersAndSubfolders() {
+        S3Folder root = s3Service.listAllFoldersAndSubfolders();
+        return new ResponseEntity<>(root, HttpStatus.OK);
+    }
+}
+
