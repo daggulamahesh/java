@@ -22,3 +22,85 @@ public class S3Folder {
         this.subFolders.put(name, subFolder);
     }
 }
+
+
+
+
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.PostConstruct;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class S3Service {
+
+    private S3Client s3Client;
+
+    @Value("${aws.access.key.id}")
+    private String accessKeyId;
+
+    @Value("${aws.secret.access.key}")
+    private String secretAccessKey;
+
+    @Value("${aws.region}")
+    private String region;
+
+    @Value("${aws.s3.bucket}")
+    private String bucketName;
+
+    @PostConstruct
+    public void initializeAmazon() {
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKeyId, secretAccessKey);
+        this.s3Client = S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                .build();
+    }
+
+    public S3Folder listAllFoldersAndSubfolders() {
+        S3Folder root = new S3Folder("root");
+
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+                .bucket(bucketName)
+                .build();
+
+        ListObjectsV2Response result;
+        do {
+            result = s3Client.listObjectsV2(request);
+
+            result.contents().forEach(s3Object -> {
+                String key = s3Object.key();
+                addFolderToTree(root, key);
+            });
+
+            String token = result.nextContinuationToken();
+            if (token == null) {
+                break;
+            }
+            request = request.toBuilder().continuationToken(token).build();
+        } while (result.isTruncated());
+
+        return root;
+    }
+
+    private void addFolderToTree(S3Folder root, String key) {
+        String[] parts = key.split("/");
+
+        S3Folder current = root;
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                current = current.getSubFolders().computeIfAbsent(part, S3Folder::new);
+            }
+        }
+    }
+}
