@@ -1,0 +1,24 @@
+import java.util.HashMap;
+import java.util.Map;
+
+public class S3Folder {
+    private String name;
+    private Map<String, S3Folder> subFolders;
+
+    public S3Folder(String name) {
+        this.name = name;
+        this.subFolders = new HashMap<>();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Map<String, S3Folder> getSubFolders() {
+        return subFolders;
+    }
+
+    public void addSubFolder(String name, S3Folder subFolder) {
+        this.subFolders.put(name, subFolder);
+    }
+}
