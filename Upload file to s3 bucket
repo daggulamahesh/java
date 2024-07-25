@@ -104,3 +104,78 @@ aws.secret.access.key=your-secret-access-key
 aws.region=your-region
 aws.s3.bucket=your-bucket-name
 
+
+
+
+
+
+------------
+
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.PostConstruct;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+@Service
+public class S3Service {
+
+    private S3Client s3Client;
+
+    @Value("${aws.access.key.id}")
+    private String accessKeyId;
+
+    @Value("${aws.secret.access.key}")
+    private String secretAccessKey;
+
+    @Value("${aws.region}")
+    private String region;
+
+    @PostConstruct
+    public void initializeAmazon() {
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKeyId, secretAccessKey);
+        this.s3Client = S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                .build();
+    }
+
+    public void uploadExcelToS3(Workbook workbook, String bucketName, String key) {
+        try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            workbook.write(bos);
+            byte[] bytes = bos.toByteArray();
+
+            Path tempFilePath = Files.createTempFile("excel-", ".xlsx");
+            try (FileOutputStream fos = new FileOutputStream(tempFilePath.toFile())) {
+                fos.write(bytes);
+            }
+
+            try (InputStream is = new ByteArrayInputStream(bytes)) {
+                PutObjectRequest request = PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(key)
+                        .build();
+
+                s3Client.putObject(request, tempFilePath);
+            } finally {
+                Files.deleteIfExists(tempFilePath);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
