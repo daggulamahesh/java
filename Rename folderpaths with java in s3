@@ -1,3 +1,18 @@
+
+To handle the situation where the new uploading file's name already exists in the target S3 bucket (either in the same folder or at the same level), you can append a unique identifier to the file name. This can be done using a timestamp, UUID, or some other unique string.
+
+Here’s how you can modify the code to ensure a unique name for the new file:
+
+Check for File Existence: Before uploading the file, check if a file with the same key already exists in the bucket.
+Generate a Unique File Name: If the file exists, modify the file name to include a unique identifier, such as a timestamp or UUID.
+Upload the File: Proceed to upload the file with the unique name.
+Updated Code
+Here's an updated method that includes the logic for ensuring the new file name is unique:
+
+java
+
+
+
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
