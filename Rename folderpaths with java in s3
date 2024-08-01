@@ -1,0 +1,139 @@
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Object;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.PostConstruct;
+import java.io.FileInputStream;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+public class S3Service {
+
+    private S3Client s3Client;
+
+    @Value("${aws.access.key.id}")
+    private String accessKeyId;
+
+    @Value("${aws.secret.access.key}")
+    private String secretAccessKey;
+
+    @Value("${aws.region}")
+    private String region;
+
+    @PostConstruct
+    public void initializeAmazon() {
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKeyId, secretAccessKey);
+        this.s3Client = S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                .build();
+    }
+
+    public void renameSubfolderAndUploadFile(String bucketName, String oldPrefix, String oldSubfolder, String newSubfolder, String newFileKey, FileInputStream inputStream, long contentLength) {
+        String oldFolderPath = oldPrefix + oldSubfolder;
+        String newFolderPath = oldPrefix + newSubfolder;
+
+        // Check if the new folder already exists
+        ListObjectsV2Request checkRequest = ListObjectsV2Request.builder()
+                .bucket(bucketName)
+                .prefix(newFolderPath)
+                .maxKeys(1)
+                .build();
+
+        ListObjectsV2Response checkResponse = s3Client.listObjectsV2(checkRequest);
+        if (!checkResponse.contents().isEmpty()) {
+            // Append a timestamp to the new folder name to make it unique
+            newFolderPath = oldPrefix + newSubfolder + "-" + Instant.now().toEpochMilli();
+        }
+
+        // List all objects under the old folder path
+        ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
+                .bucket(bucketName)
+                .prefix(oldFolderPath)
+                .build();
+
+        ListObjectsV2Response listResponse = s3Client.listObjectsV2(listRequest);
+        List<S3Object> objects = listResponse.contents();
+
+        // Copy each object to the new folder
+        for (S3Object s3Object : objects) {
+            String oldKey = s3Object.key();
+            String newKey = oldKey.replaceFirst(oldFolderPath, newFolderPath);
+            
+            CopyObjectRequest copyRequest = CopyObjectRequest.builder()
+                    .sourceBucket(bucketName)
+                    .sourceKey(oldKey)
+                    .destinationBucket(bucketName)
+                    .destinationKey(newKey)
+                    .build();
+
+            s3Client.copyObject(copyRequest);
+        }
+
+        // Delete the old objects
+        for (S3Object s3Object : objects) {
+            String oldKey = s3Object.key();
+            
+            DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(oldKey)
+                    .build();
+
+            s3Client.deleteObject(deleteRequest);
+        }
+
+        // Upload the new file if needed
+        if (newFileKey != null && inputStream != null) {
+            // Check if the file already exists in S3
+            HeadObjectRequest headRequest = HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(newFileKey)
+                    .build();
+
+            try {
+                s3Client.headObject(headRequest);
+                // If no exception is thrown, the object exists
+                String newFileName = Paths.get(newFileKey).getFileName().toString();
+                String newFileNameWithoutExtension = newFileName.substring(0, newFileName.lastIndexOf('.'));
+                String fileExtension = newFileName.substring(newFileName.lastIndexOf('.'));
+                String uniqueFileName = newFileNameWithoutExtension + "-" + UUID.randomUUID() + fileExtension;
+                newFileKey = newFileKey.replace(newFileName, uniqueFileName);
+            } catch (Exception e) {
+                // File doesn't exist, continue with the given newFileKey
+            }
+
+            try {
+                PutObjectRequest putRequest = PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(newFileKey)
+                        .contentLength(contentLength)
+                        .build();
+
+                s3Client.putObject(putRequest, Paths.get(inputStream.toString()));
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    inputStream.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+}
