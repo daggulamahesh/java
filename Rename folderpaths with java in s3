@@ -152,3 +152,46 @@ public class S3Service {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+Key Changes
+Checking File Existence: The HeadObjectRequest is used to check if the file exists by attempting to fetch its metadata. If an exception is thrown, the file does not exist; if not, it means the file exists.
+
+Generating a Unique File Name: If the file already exists, a unique identifier (UUID) is appended to the file name before the extension. This ensures that the new file name is unique.
+
+Handling File Upload: The newFileKey is updated to the unique name if the file already exists; otherwise, it proceeds with the original name.
+
+Usage Example
+Here's an example of using the method:
+
+java
+Copy code
+import java.io.FileInputStream;
+
+public class FileUploadExample {
+
+    public static void main(String[] args) {
+        S3Service s3Service = new S3Service();
+        String bucketName = "your-bucket-name";
+        String oldPrefix = "mahesh/";
+        String oldSubfolder = "mahi";
+        String newSubfolder = "new-mahi";
+        String newFileKey = "mahesh/new-mahi/new-file.txt";
+
+        try (FileInputStream fis = new FileInputStream("path/to/your/new-file.txt")) {
+            long contentLength = new File("path/to/your/new-file.txt").length();
+            s3Service.renameSubfolderAndUploadFile(bucketName, oldPrefix, oldSubfolder, newSubfolder, newFileKey, fis, contentLength);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+This approach ensures that each uploaded file has a unique name, preventing accidental overwrites and data loss. You can customize the logic for generating unique file names to suit your specific requirements, such as using timestamps, UUIDs, or other identifiers
