@@ -1,3 +1,60 @@
+import java.util.HashMap;
+import java.util.Map;
+
+public class S3Folder {
+    private String name;
+    private FileType type; // Can be "folder" or "file"
+    private Map<String, S3Folder> subFolders;
+    private Map<String, String> files; // Map of file names to their types (e.g., "file" or "zip")
+    private Map<String, Long> fileSizes; // Map of file names to their sizes
+    private String creationTime;
+
+    public S3Folder(String name, FileType type, String creationTime) {
+        this.name = name;
+        this.type = type;
+        this.subFolders = new HashMap<>();
+        this.files = new HashMap<>();
+        this.fileSizes = new HashMap<>();
+        this.creationTime = creationTime;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public FileType getType() {
+        return type;
+    }
+
+    public String getCreationTime() {
+        return creationTime;
+    }
+
+    public Map<String, S3Folder> getSubFolders() {
+        return subFolders;
+    }
+
+    public Map<String, String> getFiles() {
+        return files;
+    }
+
+    public Map<String, Long> getFileSizes() {
+        return fileSizes;
+    }
+
+    public void addSubFolder(String name, S3Folder subFolder) {
+        this.subFolders.put(name, subFolder);
+    }
+
+    public void addFile(String name, String type, long size) {
+        this.files.put(name, type);
+        this.fileSizes.put(name, size);
+    }
+}
+
+
+
+
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
