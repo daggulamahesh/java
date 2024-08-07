@@ -1,0 +1,105 @@
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.S3Object;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.PostConstruct;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class S3Service {
+
+    private S3Client s3Client;
+
+    @Value("${aws.access.key.id}")
+    private String accessKeyId;
+
+    @Value("${aws.secret.access.key}")
+    private String secretAccessKey;
+
+    @Value("${aws.region}")
+    private String region;
+
+    @Value("${aws.s3.bucket}")
+    private String bucketName;
+
+    @PostConstruct
+    public void initializeAmazon() {
+        AwsBasicCredentials awsCreds = AwsBasicCredentials.create(accessKeyId, secretAccessKey);
+        this.s3Client = S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(StaticCredentialsProvider.create(awsCreds))
+                .build();
+    }
+
+    public S3Folder listAllFoldersAndSubfolders() {
+        S3Folder root = new S3Folder("root", FileType.FOLDER, null);
+
+        ListObjectsV2Request request = ListObjectsV2Request.builder()
+                .bucket(bucketName)
+                .build();
+
+        ListObjectsV2Response result;
+        do {
+            result = s3Client.listObjectsV2(request);
+
+            for (S3Object s3Object : result.contents()) {
+                String key = s3Object.key();
+                String creationTime = formatInstantWithOffset(s3Object.lastModified());
+                long fileSize = s3Object.size();
+                addFolderOrFileToTree(root, key, creationTime, fileSize);
+            }
+
+            String token = result.nextContinuationToken();
+            if (token == null) {
+                break;
+            }
+            request = request.toBuilder().continuationToken(token).build();
+        } while (result.isTruncated());
+
+        return root;
+    }
+
+    private void addFolderOrFileToTree(S3Folder root, String key, String creationTime, long fileSize) {
+        String[] parts = key.split("/");
+
+        S3Folder current = root;
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+
+            if (i == parts.length - 1) { // Last part of the key
+                String extension = part.contains(".") ? part.substring(part.lastIndexOf(".") + 1) : "";
+                FileType fileType = FileType.fromExtension(extension);
+
+                if (fileType == FileType.FOLDER && !part.isEmpty() && !part.contains(".")) {
+                    S3Folder newFolder = new S3Folder(part, FileType.FOLDER, creationTime);
+                    current.addSubFolder(part, newFolder);
+                } else {
+                    current.addFile(part, fileType.name(), fileSize);
+                }
+            } else { // Intermediate part of the key
+                current = current.getSubFolders().computeIfAbsent(part, k -> new S3Folder(k, FileType.FOLDER, creationTime));
+            }
+        }
+    }
+
+    private String formatInstantWithOffset(Instant instant) {
+        ZoneId systemZone = ZoneId.systemDefault();
+        ZonedDateTime systemZonedDateTime = ZonedDateTime.ofInstant(instant, systemZone);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy, HH:mm:ss (XXX)");
+
+        return systemZonedDateTime.format(formatter);
+    }
+}
