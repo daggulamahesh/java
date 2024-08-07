@@ -160,3 +160,10 @@ public class S3Service {
         return systemZonedDateTime.format(formatter);
     }
 }
+
+
+Explanation
+Capture File Size: The S3Folder class now has a fileSizes map that stores the sizes of the files.
+Add File Size: The addFile method in the S3Folder class is updated to include the file size.
+Retrieve File Size: In the S3Service class, the addFolderOrFileToTree method captures the file size and stores it in the S3Folder structure.
+This setup ensures that the file sizes are captured and stored along with other file metadata, such as the creation time and type.
