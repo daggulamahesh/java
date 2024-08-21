@@ -1,0 +1,11 @@
+SELECT attributename, newvalue, countofvalue
+FROM (
+    SELECT 
+        attributename, 
+        newvalue, 
+        countofvalue, 
+        ROW_NUMBER() OVER (PARTITION BY attributename ORDER BY countofvalue DESC) AS rn
+    FROM your_table_name
+) subquery
+WHERE rn <= 100
+ORDER BY attributename, rn;
