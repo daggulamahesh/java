@@ -108,3 +108,118 @@ public class AverageTimestamp {
         }
     }
 }
+
+
+
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class AverageTimestamp {
+
+    public static void main(String[] args) {
+        List<String> timestamps = new ArrayList<>();
+        timestamps.add("2024-08-23T12:45:30");
+        timestamps.add("23/08/2024 14:30:00");
+        timestamps.add("2024-Aug-23 16:15:45");
+        timestamps.add("23-Aug-2024 18:45:00");
+        timestamps.add("01/20/2022 14:30:00");
+        timestamps.add("02/20/2022"); // Date only, no time
+        timestamps.add("Invalid-Date-String"); // Example of an invalid date
+
+        // List of common formatters
+        List<DateTimeFormatter> dateTimeFormatters = createDateTimeFormatters();
+        List<DateTimeFormatter> dateFormatters = createDateFormatters();
+
+        // Convert all valid timestamps to milliseconds since epoch
+        List<Long> epochMillisList = new ArrayList<>();
+        for (String timestamp : timestamps) {
+            LocalDateTime parsedDateTime = null;
+            DateTimeFormatter successfulFormatter = null;
+
+            // Try parsing as LocalDateTime first
+            for (DateTimeFormatter formatter : dateTimeFormatters) {
+                parsedDateTime = parseTimestampAsLocalDateTime(timestamp, formatter);
+                if (parsedDateTime != null) {
+                    successfulFormatter = formatter;
+                    break;
+                }
+            }
+
+            // If parsing as LocalDateTime fails, try parsing as LocalDate
+            if (parsedDateTime == null) {
+                for (DateTimeFormatter formatter : dateFormatters) {
+                    LocalDate parsedDate = parseTimestampAsLocalDate(timestamp, formatter);
+                    if (parsedDate != null) {
+                        parsedDateTime = parsedDate.atTime(LocalTime.MIDNIGHT);
+                        successfulFormatter = formatter;
+                        break;
+                    }
+                }
+            }
+
+            if (parsedDateTime != null) {
+                epochMillisList.add(parsedDateTime.toInstant(ZoneOffset.UTC).toEpochMilli());
+                System.out.println("Successfully parsed timestamp: " + timestamp + " using format: " + successfulFormatter.toString());
+            } else {
+                System.err.println("Invalid timestamp: " + timestamp + ". Skipping.");
+            }
+        }
+
+        if (!epochMillisList.isEmpty()) {
+            // Calculate the average timestamp in milliseconds
+            long averageMillis = epochMillisList.stream().mapToLong(Long::longValue).average().orElse(0);
+
+            // Convert the average milliseconds back to LocalDateTime
+            LocalDateTime averageDateTime = LocalDateTime.ofEpochSecond(averageMillis / 1000, 0, ZoneOffset.UTC);
+
+            System.out.println("Average DateTime: " + averageDateTime);
+        } else {
+            System.err.println("No valid timestamps were parsed.");
+        }
+    }
+
+    private static List<DateTimeFormatter> createDateTimeFormatters() {
+        List<DateTimeFormatter> formatters = new ArrayList<>();
+        formatters.add(DateTimeFormatter.ISO_LOCAL_DATE_TIME); // e.g., 2024-08-23T12:45:30
+        formatters.add(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")); // e.g., 23/08/2024 14:30:00
+        formatters.add(DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm:ss")); // e.g., 2024-Aug-23 16:15:45
+        formatters.add(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss")); // e.g., 23-Aug-2024 18:45:00
+        formatters.add(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")); // e.g., 2024/08/23 12:45:30
+        formatters.add(DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")); // e.g., 01/20/2022 14:30:00
+        formatters.add(DateTimeFormatter.ofPattern("yyyyMMdd HHmmss")); // e.g., 20240823 124530
+        return formatters;
+    }
+
+    private static List<DateTimeFormatter> createDateFormatters() {
+        List<DateTimeFormatter> formatters = new ArrayList<>();
+        formatters.add(DateTimeFormatter.ofPattern("dd/MM/yyyy")); // e.g., 23/08/2024
+        formatters.add(DateTimeFormatter.ofPattern("MM/dd/yyyy")); // e.g., 01/20/2022
+        formatters.add(DateTimeFormatter.ofPattern("yyyy-MM-dd")); // e.g., 2024-08-23
+        formatters.add(DateTimeFormatter.ofPattern("yyyy/MM/dd")); // e.g., 2024/08/23
+        return formatters;
+    }
+
+    private static LocalDateTime parseTimestampAsLocalDateTime(String timestamp, DateTimeFormatter formatter) {
+        try {
+            return LocalDateTime.parse(timestamp, formatter);
+        } catch (DateTimeParseException e) {
+            return null; // Parsing failed with this format
+        }
+    }
+
+    private static LocalDate parseTimestampAsLocalDate(String timestamp, DateTimeFormatter formatter) {
+        try {
+            return LocalDate.parse(timestamp, formatter);
+        } catch (DateTimeParseException e) {
+            return null; // Parsing failed with this format
+        }
+    }
+}
+
