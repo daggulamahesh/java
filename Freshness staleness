@@ -1,0 +1,139 @@
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.Period;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class AverageTimestamp {
+
+    public static void main(String[] args) {
+        List<String> timestamps = new ArrayList<>();
+        timestamps.add("2024-08-23T12:45:30"); // Date and time
+        timestamps.add("23/08/2024 14:30:00"); // Date and time
+        timestamps.add("2024-Aug-23 16:15:45"); // Date and time
+        timestamps.add("23-Aug-2024 18:45:00"); // Date and time
+        timestamps.add("01/20/2022 14:30:00"); // Date and time
+        timestamps.add("02/20/2022"); // Date only
+        timestamps.add("2024-08-23"); // Date only
+        timestamps.add("Invalid-Date-String"); // Example of an invalid date
+
+        // Combine the formatters
+        List<DateTimeFormatter> formatters = createFormatters();
+
+        // Convert all valid timestamps to milliseconds since epoch
+        List<Long> epochMillisList = new ArrayList<>();
+        for (String timestamp : timestamps) {
+            LocalDateTime parsedDateTime = null;
+
+            // Try parsing the timestamp using the combined formatters list
+            for (DateTimeFormatter formatter : formatters) {
+                parsedDateTime = parseTimestamp(timestamp, formatter);
+                if (parsedDateTime != null) {
+                    break;
+                }
+            }
+
+            if (parsedDateTime != null) {
+                epochMillisList.add(parsedDateTime.toInstant(ZoneOffset.UTC).toEpochMilli());
+                System.out.println("Successfully parsed timestamp: " + timestamp);
+            } else {
+                System.err.println("Invalid timestamp: " + timestamp + ". Skipping.");
+            }
+        }
+
+        if (!epochMillisList.isEmpty()) {
+            // Calculate the average timestamp in milliseconds
+            long averageMillis = epochMillisList.stream().mapToLong(Long::longValue).average().orElse(0);
+
+            // Convert the average milliseconds back to LocalDateTime
+            LocalDateTime averageDateTime = LocalDateTime.ofEpochSecond(averageMillis / 1000, 0, ZoneOffset.UTC);
+
+            System.out.println("Average DateTime: " + averageDateTime);
+
+            // Calculate the current date and time
+            LocalDateTime currentDateTime = LocalDateTime.now();
+
+            // Calculate the date-based difference (years, months, days)
+            Period period = Period.between(averageDateTime.toLocalDate(), currentDateTime.toLocalDate());
+
+            // Calculate the time-based difference (hours, minutes)
+            Duration duration = Duration.between(averageDateTime.toLocalTime(), currentDateTime.toLocalTime());
+
+            // Output the staleness in years, months, days, hours, and minutes
+            long years = period.getYears();
+            long months = period.getMonths();
+            long days = period.getDays();
+            long hours = duration.toHours();
+            long minutes = duration.toMinutes() % 60;
+
+            System.out.println("Staleness: " + years + " years, " + months + " months, " 
+                               + days + " days, " + hours + " hours, " + minutes + " minutes");
+
+            // Calculate freshness using staleness in total minutes
+            double totalMinutes = (years * 365.25 * 24 * 60) + (months * 30.44 * 24 * 60) + (days * 24 * 60)
+                                + (hours * 60) + minutes;
+            double freshnessInMinutes = 1.0 / totalMinutes;
+
+            // Convert freshness back to years, months, days, hours, and minutes
+            long freshnessTotalMinutes = (long)(freshnessInMinutes * totalMinutes);
+            
+            long freshnessYears = freshnessTotalMinutes / (long)(365.25 * 24 * 60);
+            freshnessTotalMinutes %= (long)(365.25 * 24 * 60);
+
+            long freshnessMonths = freshnessTotalMinutes / (long)(30.44 * 24 * 60);
+            freshnessTotalMinutes %= (long)(30.44 * 24 * 60);
+
+            long freshnessDays = freshnessTotalMinutes / (24 * 60);
+            freshnessTotalMinutes %= (24 * 60);
+
+            long freshnessHours = freshnessTotalMinutes / 60;
+            long freshnessMinutes = freshnessTotalMinutes % 60;
+
+            System.out.println("Freshness: " + freshnessYears + " years, " + freshnessMonths + " months, " 
+                               + freshnessDays + " days, " + freshnessHours + " hours, " + freshnessMinutes + " minutes");
+        } else {
+            System.err.println("No valid timestamps were parsed.");
+        }
+    }
+
+    private static List<DateTimeFormatter> createFormatters() {
+        List<DateTimeFormatter> formatters = new ArrayList<>();
+        
+        // DateTime formatters (date + time)
+        formatters.add(DateTimeFormatter.ISO_LOCAL_DATE_TIME); // e.g., 2024-08-23T12:45:30
+        formatters.add(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")); // e.g., 23/08/2024 14:30:00
+        formatters.add(DateTimeFormatter.ofPattern("yyyy-MMM-dd HH:mm:ss")); // e.g., 2024-Aug-23 16:15:45
+        formatters.add(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss")); // e.g., 23-Aug-2024 18:45:00
+        formatters.add(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss")); // e.g., 2024/08/23 12:45:30
+        formatters.add(DateTimeFormatter.ofPattern("MM/dd/yyyy HH:mm:ss")); // e.g., 01/20/2022 14:30:00
+        formatters.add(DateTimeFormatter.ofPattern("yyyyMMdd HHmmss")); // e.g., 20240823 124530
+
+        // Date-only formatters
+        formatters.add(DateTimeFormatter.ofPattern("dd/MM/yyyy")); // e.g., 23/08/2024
+        formatters.add(DateTimeFormatter.ofPattern("MM/dd/yyyy")); // e.g., 01/20/2022
+        formatters.add(DateTimeFormatter.ofPattern("yyyy-MM-dd")); // e.g., 2024-08-23
+        formatters.add(DateTimeFormatter.ofPattern("yyyy/MM/dd")); // e.g., 2024/08/23
+
+        return formatters;
+    }
+
+    private static LocalDateTime parseTimestamp(String timestamp, DateTimeFormatter formatter) {
+        try {
+            if (formatter.toString().contains("HH:mm:ss")) {
+                // Attempt to parse as LocalDateTime
+                return LocalDateTime.parse(timestamp, formatter);
+            } else {
+                // Attempt to parse as LocalDate, then set time to midnight
+                LocalDate date = LocalDate.parse(timestamp, formatter);
+                return date.atTime(LocalTime.MIDNIGHT);
+            }
+        } catch (DateTimeParseException e) {
+            return null; // Parsing failed with this format
+        }
+    }
+}
