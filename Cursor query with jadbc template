@@ -1,0 +1,70 @@
+simport org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.ResultSetMetaData;
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class DynamicQueryService {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    /**
+     * Fetch and process dynamic queries with cursor-based fetching.
+     *
+     * @param dynamicQuery The dynamic SQL query to execute.
+     */
+    public void fetchWithDynamicCursor(String dynamicQuery) {
+        // Step 1: Start a transaction
+        jdbcTemplate.execute("BEGIN;");
+
+        // Step 2: Declare a cursor with the dynamic query
+        String cursorQuery = "DECLARE dynamic_cursor CURSOR FOR " + dynamicQuery + ";";
+        jdbcTemplate.execute(cursorQuery);
+
+        // Step 3: Fetch and process data in chunks
+        boolean hasMoreRows = true;
+        int fetchSize = 1000;  // Number of rows to fetch at a time
+
+        while (hasMoreRows) {
+            jdbcTemplate.query("FETCH " + fetchSize + " FROM dynamic_cursor;", (ResultSet rs) -> {
+                ResultSetMetaData metaData = rs.getMetaData();
+                int columnCount = metaData.getColumnCount();
+                
+                while (rs.next()) {
+                    // Process each row dynamically
+                    Map<String, Object> row = new HashMap<>();
+                    for (int i = 1; i <= columnCount; i++) {
+                        String columnName = metaData.getColumnName(i);
+                        Object columnValue = rs.getObject(i);
+                        row.put(columnName, columnValue);
+                    }
+                    // Process the row (for example, print it or save it somewhere)
+                    processRow(row);
+                }
+            });
+
+            // Check if the result set is empty (no more rows)
+            hasMoreRows = !jdbcTemplate.queryForObject("FETCH " + fetchSize + " FROM dynamic_cursor;", Boolean.class);
+        }
+
+        // Step 4: Close the cursor and commit the transaction
+        jdbcTemplate.execute("CLOSE dynamic_cursor;");
+        jdbcTemplate.execute("COMMIT;");
+    }
+
+    /**
+     * Processes a row of data from the dynamic query.
+     *
+     * @param row The row data represented as a map of column names and values.
+     */
+    private void processRow(Map<String, Object> row) {
+        // Add your custom processing logic for each row here
+        System.out.println("Processing row: " + row);
+    }
+}
