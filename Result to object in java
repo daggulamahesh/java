@@ -1,0 +1,128 @@
+To store data from a ResultSet (rs) into an object in Java, you typically follow these steps:
+
+1. Create a Java Class: Define a class that represents the structure of the data in your ResultSet.
+
+
+2. Iterate Through the ResultSet: Use the ResultSet methods like getString, getInt, etc., to retrieve the values for each column.
+
+
+3. Populate the Object: For each row in the ResultSet, create an instance of your class, set its properties, and optionally store it in a collection like a List.
+
+
+
+Example
+
+Step 1: Create a Class
+
+public class Employee {
+    private int id;
+    private String name;
+    private String department;
+
+    // Constructors
+    public Employee() {}
+
+    public Employee(int id, String name, String department) {
+        this.id = id;
+        this.name = name;
+        this.department = department;
+    }
+
+    // Getters and Setters
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+}
+
+Step 2: Fetch Data and Populate Objects
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class Main {
+    public static void main(String[] args) {
+        String url = "jdbc:mysql://localhost:3306/your_database";
+        String username = "your_username";
+        String password = "your_password";
+
+        List<Employee> employees = new ArrayList<>();
+
+        try (Connection conn = DriverManager.getConnection(url, username, password);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT id, name, department FROM employees")) {
+
+            while (rs.next()) {
+                // Retrieve values from ResultSet
+                int id = rs.getInt("id");
+                String name = rs.getString("name");
+                String department = rs.getString("department");
+
+                // Create an Employee object
+                Employee employee = new Employee(id, name, department);
+
+                // Add it to the list
+                employees.add(employee);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // Print the list
+        for (Employee emp : employees) {
+            System.out.println(emp.getId() + " - " + emp.getName() + " - " + emp.getDepartment());
+        }
+    }
+}
+
+Explanation
+
+1. ResultSet Access:
+
+Use column names (rs.getString("name")) or column indices (rs.getString(2)).
+
+
+
+2. Object Creation:
+
+Instantiate an object for each row and set its properties.
+
+
+
+3. Store in Collection:
+
+Add the object to a List or any other collection for further processing.
+
+
+
+
+Notes
+
+Make sure to handle exceptions properly.
+
+Always close database resources (use try-with-resources as in the example).
+
+Match the column names and data types with your database schema.
+
+
